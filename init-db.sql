@@ -29,15 +29,13 @@ CREATE TABLE IF NOT EXISTS `franchises` (
     CONSTRAINT `fk_location` FOREIGN KEY (`location_id`) REFERENCES `locations` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-
 CREATE TABLE IF NOT EXISTS `dns_records` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `franchise_id` INT(11) NOT NULL,
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `franchise_id` INT NOT NULL,
   `type` VARCHAR(50) NOT NULL,
   `value` TEXT NOT NULL,
-  `ttl` INT(11) DEFAULT NULL,
-  `priority` INT(11) DEFAULT NULL,
+  `ttl` INT DEFAULT NULL,
+  `priority` INT DEFAULT NULL,
   PRIMARY KEY (`id`),
-  FOREIGN KEY (`franchise_id`) REFERENCES `franchises` (`id`) ON DELETE CASCADE,
-  INDEX `franchise_id_idx` (`franchise_id`)
+  FOREIGN KEY (`franchise_id`) REFERENCES `franchises` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
