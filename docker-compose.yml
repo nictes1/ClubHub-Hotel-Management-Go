@@ -10,14 +10,16 @@ services:
     depends_on:
       - db
     environment:
-      - DB_HOST=db
-      - DB_USER=root
-      - DB_PASSWORD=secret
-      - DB_NAME=hotelmagnamentdb
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: secret
+      DB_NAME: hotelmagnamentdb
 
   db:
     image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password
+    container_name: hotelmagnament-db
+    restart: always
     ports:
       - "3306:3306"
     environment:
@@ -25,7 +27,7 @@ services:
       MYSQL_DATABASE: hotelmagnamentdb
     volumes:
       - db_data:/var/lib/mysql
-      - ./utils/db/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql  
 
 volumes:
   db_data:
