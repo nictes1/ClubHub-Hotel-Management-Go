@@ -1,7 +1,13 @@
 package domain
 
+type FranquiciaRequest struct {
+	ID  string `json:"id,omitempty"`
+	URL string `json:"url"`
+}
+
 // Franquicia representa los datos de una franquicia hotelera.
 type Franquicia struct {
+	ID            string     `json:"id"`
 	Name          string     `json:"name"`
 	URL           string     `json:"url"`
 	Location      Location   `json:"location"`
@@ -12,6 +18,7 @@ type Franquicia struct {
 
 // DomainInfo contiene información detallada sobre el dominio de una franquicia.
 type DomainInfo struct {
+	ID               string      `json:"id"`
 	CreatedDate      string      `json:"created_date,omitempty"`       // Fecha de creación del dominio
 	ExpiryDate       string      `json:"expiry_date,omitempty"`        // Fecha de expiración del dominio
 	RegistrarName    string      `json:"registrar_name,omitempty"`     // Nombre del registrador del dominio
@@ -24,6 +31,7 @@ type DomainInfo struct {
 }
 
 type DNSRecord struct {
+	ID       string `json:"id"`
 	Type     string `json:"type"`     // Tipo de registro DNS (ej. A, AAAA, CNAME, MX, etc.)
 	Value    string `json:"value"`    // Valor del registro DNS (ej. dirección IP para registros tipo A)
 	TTL      int    `json:"ttl"`      // Tiempo de vida del registro (Time To Live)
@@ -31,6 +39,7 @@ type DNSRecord struct {
 }
 
 type SSLInfo struct {
+	ID              string        `json:"id"`
 	Host            string        `json:"host"`
 	Port            int           `json:"port"`
 	Protocol        string        `json:"protocol"`
@@ -44,6 +53,7 @@ type SSLInfo struct {
 }
 
 type SSLEndpoint struct {
+	ID                string `json:"id"`
 	IPAddress         string `json:"ipAddress"`
 	ServerName        string `json:"serverName"`
 	StatusMessage     string `json:"statusMessage"`

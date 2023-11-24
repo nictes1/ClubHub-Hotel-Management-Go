@@ -10,10 +10,11 @@ services:
     depends_on:
       - db
     environment:
-      DB_HOST: db
-      DB_USER: root
-      DB_PASSWORD: secret
-      DB_NAME: hotelmagnamentdb
+      MYSQL_HOST: db
+      MYSQL_USER: root
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: hotelmagnamentdb
+      MYSQL_PORT: 3306
 
   db:
     image: mysql:8.0
@@ -25,6 +26,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: secret
       MYSQL_DATABASE: hotelmagnamentdb
+      MYSQL_USER: root
     volumes:
       - db_data:/var/lib/mysql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql  
