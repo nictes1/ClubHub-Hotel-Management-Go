@@ -3,11 +3,16 @@ package routes
 import (
 	"clubhub-hotel-management/cmd/server/handler"
 	"clubhub-hotel-management/internal/franquicia"
-	"database/sql"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/swaggo/swag/example/basic/docs"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+func init() {
+
+}
 
 type Router interface {
 	MapRoutes()
@@ -16,11 +21,11 @@ type Router interface {
 type router struct {
 	r       *gin.Engine
 	rg      *gin.RouterGroup
-	mysqldb *sql.DB
+	mongodb *mongo.Client
 }
 
-func NewRouter(r *gin.Engine, mysql *sql.DB) Router {
-	return &router{r: r, mysqldb: mysql}
+func NewRouter(r *gin.Engine, mongoDB *mongo.Client) Router {
+	return &router{r: r, mongodb: mongoDB}
 }
 
 func (r *router) MapRoutes() {
@@ -35,14 +40,15 @@ func (r *router) setGroup() {
 }
 
 func (r *router) buildRoutes() {
-
-	repository := franquicia.NewRepository(r.mysqldb)
+	repository := franquicia.NewRepository(r.mongodb.Database(os.Getenv("MONGODB_DATABASE_NAME")).Collection("franchises"))
 	service := franquicia.NewService(repository)
 	fHandler := handler.NewUser(service)
 	franchises := r.rg.Group("/franchises")
-	franchises.GET("/one")
 	franchises.POST("/new", fHandler.Create())
 	franchises.GET("/all", fHandler.GetAllFranquicias())
-	//r.rg.DELETE("/user/:id", fHandler)
-	//r.rg.PUT("/user/:id", fHandler)
+	franchises.PUT("/:id", fHandler.UpdateFranquicia())
+	franchises.GET("/one/:id", fHandler.GetFranquiciaByID())
+	franchises.GET("/location", fHandler.GetByLocation())
+	franchises.GET("/daterange", fHandler.GetFranquiciasByDateRange())
+	franchises.GET("/name", fHandler.GetFranquiciasByName())
 }

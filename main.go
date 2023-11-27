@@ -2,19 +2,29 @@ package main
 
 import (
 	"clubhub-hotel-management/cmd/server/routes"
-	"clubhub-hotel-management/utils/db"
+	"clubhub-hotel-management/internal/db"
+
+	"context"
+	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
-func main() {
+func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	}
+}
 
+func main() {
+	gin.SetMode(gin.ReleaseMode)
 	engine := gin.Default()
 
-	mysql := db.ClientMySQL
-	defer mysql.Close()
+	mongodb := db.MongoClient
 
-	router := routes.NewRouter(engine, mysql)
+	router := routes.NewRouter(engine, mongodb)
 	router.MapRoutes()
+	defer mongodb.Disconnect(context.Background())
 	engine.Run(":8080")
 }

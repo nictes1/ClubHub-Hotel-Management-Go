@@ -1,67 +1,69 @@
 package domain
 
+import "go.mongodb.org/mongo-driver/bson/primitive"
+
 type FranquiciaRequest struct {
-	ID  string `json:"id,omitempty"`
-	URL string `json:"url"`
+	ID       string   `json:"id,omitempty" bson:"_id,omitempty"`
+	URL      string   `json:"url" bson:"url"`
+	Name     string   `json:"name" bson:"name"`
+	Location Location `json:"location" bson:"location"`
 }
 
-// Franquicia representa los datos de una franquicia hotelera.
 type Franquicia struct {
-	ID            string     `json:"id"`
-	Name          string     `json:"name"`
-	URL           string     `json:"url"`
-	Location      Location   `json:"location"`
-	LogoURL       string     `json:"logo_url,omitempty"`    // URL del logo obtenida por scraping
-	IsWebsiteLive bool       `json:"is_website_live"`       // Estado de disponibilidad del sitio web
-	DomainInfo    DomainInfo `json:"domain_info,omitempty"` // Información del dominio obtenida mediante la librería Whois o API de SSL Labs
+	ID            primitive.ObjectID `json:"id" bson:"_id"`
+	Name          string             `json:"name" bson:"name"`
+	URL           string             `json:"url" bson:"url"`
+	Location      Location           `json:"location" bson:"location"`
+	LogoURL       string             `json:"logo_url,omitempty" bson:"logo_url,omitempty"`
+	IsWebsiteLive bool               `json:"is_website_live" bson:"is_website_live"`
+	DomainInfo    DomainInfo         `json:"domain_info,omitempty" bson:"domain_info,omitempty"`
 }
 
-// DomainInfo contiene información detallada sobre el dominio de una franquicia.
 type DomainInfo struct {
-	ID               string      `json:"id"`
-	CreatedDate      string      `json:"created_date,omitempty"`       // Fecha de creación del dominio
-	ExpiryDate       string      `json:"expiry_date,omitempty"`        // Fecha de expiración del dominio
-	RegistrarName    string      `json:"registrar_name,omitempty"`     // Nombre del registrador del dominio
-	ContactEmail     string      `json:"contact_email,omitempty"`      // Email de contacto del titular del dominio
-	Protocol         string      `json:"protocol,omitempty"`           // Protocolo de comunicación (ej. HTTP, HTTPS)
-	IsProtocolSecure bool        `json:"is_protocol_secure,omitempty"` // Indica si el protocolo de comunicación es seguro (HTTPS)
-	ServerHops       []string    `json:"server_hops,omitempty"`        // Nombres de los servidores por los que pasa la solicitud antes de llegar al host
-	SSLGrade         string      `json:"ssl_grade,omitempty"`          // Calificación SSL del sitio web (obtenido de SSL Labs)
-	DNSRecords       []DNSRecord `json:"dns_records,omitempty"`        // Registros DNS del dominio
+	ID               string      `json:"id" bson:"_id"`
+	CreatedDate      string      `json:"created_date,omitempty" bson:"created_date,omitempty"`
+	ExpiryDate       string      `json:"expiry_date,omitempty" bson:"expiry_date,omitempty"`
+	RegistrarName    string      `json:"registrar_name,omitempty" bson:"registrar_name,omitempty"`
+	ContactEmail     string      `json:"contact_email,omitempty" bson:"contact_email,omitempty"`
+	Protocol         string      `json:"protocol,omitempty" bson:"protocol,omitempty"`
+	IsProtocolSecure bool        `json:"is_protocol_secure,omitempty" bson:"is_protocol_secure,omitempty"`
+	ServerHops       []string    `json:"server_hops,omitempty" bson:"server_hops,omitempty"`
+	SSLGrade         string      `json:"ssl_grade,omitempty" bson:"ssl_grade,omitempty"`
+	DNSRecords       []DNSRecord `json:"dns_records,omitempty" bson:"dns_records,omitempty"`
 }
 
 type DNSRecord struct {
-	ID       string `json:"id"`
-	Type     string `json:"type"`     // Tipo de registro DNS (ej. A, AAAA, CNAME, MX, etc.)
-	Value    string `json:"value"`    // Valor del registro DNS (ej. dirección IP para registros tipo A)
-	TTL      int    `json:"ttl"`      // Tiempo de vida del registro (Time To Live)
-	Priority int    `json:"priority"` // Prioridad del registro (usado principalmente para registros MX)
+	ID       string `json:"id" bson:"_id"`
+	Type     string `json:"type" bson:"type"`
+	Value    string `json:"value" bson:"value"`
+	TTL      int    `json:"ttl" bson:"ttl"`
+	Priority int    `json:"priority" bson:"priority"`
 }
 
 type SSLInfo struct {
-	ID              string        `json:"id"`
-	Host            string        `json:"host"`
-	Port            int           `json:"port"`
-	Protocol        string        `json:"protocol"`
-	IsPublic        bool          `json:"isPublic"`
-	Status          string        `json:"status"`
-	StartTime       int64         `json:"startTime"`
-	TestTime        int64         `json:"testTime"`
-	EngineVersion   string        `json:"engineVersion"`
-	CriteriaVersion string        `json:"criteriaVersion"`
-	Endpoints       []SSLEndpoint `json:"endpoints"`
+	ID              string        `json:"id" bson:"_id"`
+	Host            string        `json:"host" bson:"host"`
+	Port            int           `json:"port" bson:"port"`
+	Protocol        string        `json:"protocol" bson:"protocol"`
+	IsPublic        bool          `json:"isPublic" bson:"isPublic"`
+	Status          string        `json:"status" bson:"status"`
+	StartTime       int64         `json:"startTime" bson:"startTime"`
+	TestTime        int64         `json:"testTime" bson:"testTime"`
+	EngineVersion   string        `json:"engineVersion" bson:"engineVersion"`
+	CriteriaVersion string        `json:"criteriaVersion" bson:"criteriaVersion"`
+	Endpoints       []SSLEndpoint `json:"endpoints" bson:"endpoints"`
 }
 
 type SSLEndpoint struct {
-	ID                string `json:"id"`
-	IPAddress         string `json:"ipAddress"`
-	ServerName        string `json:"serverName"`
-	StatusMessage     string `json:"statusMessage"`
-	Grade             string `json:"grade"`
-	GradeTrustIgnored string `json:"gradeTrustIgnored"`
-	HasWarnings       bool   `json:"hasWarnings"`
-	IsExceptional     bool   `json:"isExceptional"`
-	Progress          int    `json:"progress"`
-	Duration          int    `json:"duration"`
-	Delegation        int    `json:"delegation"`
+	ID                string `json:"id" bson:"_id"`
+	IPAddress         string `json:"ipAddress" bson:"ipAddress"`
+	ServerName        string `json:"serverName" bson:"serverName"`
+	StatusMessage     string `json:"statusMessage" bson:"statusMessage"`
+	Grade             string `json:"grade" bson:"grade"`
+	GradeTrustIgnored string `json:"gradeTrustIgnored" bson:"gradeTrustIgnored"`
+	HasWarnings       bool   `json:"hasWarnings" bson:"hasWarnings"`
+	IsExceptional     bool   `json:"isExceptional" bson:"isExceptional"`
+	Progress          int    `json:"progress" bson:"progress"`
+	Duration          int    `json:"duration" bson:"duration"`
+	Delegation        int    `json:"delegation" bson:"delegation"`
 }

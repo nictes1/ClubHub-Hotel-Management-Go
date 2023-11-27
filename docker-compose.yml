@@ -2,34 +2,12 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     ports:
       - "8080:8080"
-    depends_on:
-      - db
     environment:
-      MYSQL_HOST: db
-      MYSQL_USER: root
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: hotelmagnamentdb
-      MYSQL_PORT: 3306
-
-  db:
-    image: mysql:8.0
-    command: --default-authentication-plugin=mysql_native_password
-    container_name: hotelmagnament-db
-    restart: always
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: hotelmagnamentdb
-      MYSQL_USER: root
-    volumes:
-      - db_data:/var/lib/mysql
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql  
-
-volumes:
-  db_data:
+      MONGODB_USERNAME: user26
+      MONGODB_PASSWORD: OdHiDCuQOU5v1cs6
+      MONGODB_CLUSTER_URI: hmcluster.owpfqic.mongodb.net
+      MONGODB_DATABASE_NAME: hotelmagnamentdb
+      MONGODB_URI: mongodb+srv://user26:OdHiDCuQOU5v1cs6@hmcluster.owpfqic.mongodb.net

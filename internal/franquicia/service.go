@@ -14,12 +14,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gocolly/colly/v2"
+	"github.com/joho/godotenv"
 	"github.com/likexian/whois"
 	whoisparser "github.com/likexian/whois-parser"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type service struct {
 	repo Repository
+}
+
+func init() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 type Service interface {
@@ -28,7 +36,10 @@ type Service interface {
 	scrapeLogoURL(*gin.Context, string) (string, error)
 	getDomainInfo(*gin.Context, string) (*domain.DomainInfo, error)
 
-	GetFranquiciaByID(*gin.Context, domain.Franquicia) error
+	GetFranquiciaByID(ctx *gin.Context, id string) (domain.Franquicia, error)
+	GetByLocation(ctx *gin.Context, city, country string) ([]domain.Franquicia, error)
+	GetByDateRange(ctx *gin.Context, startDate, endDate string) ([]domain.Franquicia, error)
+	GetByFranchiseName(ctx *gin.Context, name string) ([]domain.Franquicia, error)
 	GetAllFranquicias(*gin.Context) ([]domain.Franquicia, error)
 	UpdateFranquicia(*gin.Context, domain.Franquicia) error
 }
@@ -40,90 +51,90 @@ func NewService(r Repository) Service {
 	}
 }
 
+// CreateFranquicia maneja la creación de una nueva franquicia.
 func (s *service) CreateFranquicia(ctx *gin.Context, req *domain.Franquicia) error {
 	var wg sync.WaitGroup
-	var errWhois, errScrape, errSSL error
-	var sslInfo *domain.SSLInfo
-	var domainInfo *domain.DomainInfo
-	var logoURL string
+	errs := make(chan error, 4)
 
-	wg.Add(3)
+	wg.Add(4)
 
+	// Goroutine para obtener información SSL
 	go func() {
 		defer wg.Done()
-		var err error
-		sslInfo, err = s.getSSLInfo(ctx, req.URL)
+		sslInfo, err := s.getSSLInfo(ctx, req.URL)
 		if err != nil {
-			log.Printf("error obteniendo SSL Info: %v", err)
-			errSSL = err
+			errs <- err
+			return
+		}
+
+		if sslInfo != nil && len(sslInfo.Endpoints) > 0 {
+			req.DomainInfo.SSLGrade = sslInfo.Endpoints[0].Grade
+			req.DomainInfo.Protocol = sslInfo.Protocol
+			req.DomainInfo.IsProtocolSecure = sslInfo.Protocol == "HTTPS"
+
+			var serverHops []string
+			for _, endpoint := range sslInfo.Endpoints {
+				serverHops = append(serverHops, endpoint.ServerName)
+			}
+			req.DomainInfo.ServerHops = serverHops
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		var err error
-		domainInfo, err = s.getDomainInfo(ctx, req.URL)
+		info, err := s.getDomainInfo(ctx, req.URL)
 		if err != nil {
-			log.Printf("error obteniendo Domain Info: %v", err)
-			errWhois = err
+			errs <- err
+			return
 		}
+		req.DomainInfo.CreatedDate = info.CreatedDate
+		req.DomainInfo.ExpiryDate = info.ExpiryDate
+		req.DomainInfo.RegistrarName = info.RegistrarName
+		req.DomainInfo.ContactEmail = info.ContactEmail
+		req.DomainInfo.Protocol = info.Protocol
+		req.DomainInfo.IsProtocolSecure = info.IsProtocolSecure
+		req.DomainInfo.DNSRecords = info.DNSRecords
 	}()
 
 	go func() {
 		defer wg.Done()
-		var err error
-		logoURL, err = s.scrapeLogoURL(ctx, ensureURLScheme(req.URL))
+		logoURL, err := s.scrapeLogoURL(ctx, ensureURLScheme(req.URL))
 		if err != nil {
-			log.Printf("error haciendo scraping del logo: %v", err)
-			errScrape = err
+			errs <- err
+			return
 		}
+		req.LogoURL = logoURL
+	}()
+
+	// Goroutine para obtener la ubicación
+	go func() {
+		defer wg.Done()
+		location, err := s.scrapeLocationInfo(ensureURLScheme(req.URL))
+		if err != nil {
+			errs <- err
+			return
+		}
+		req.Location = *location
 	}()
 
 	wg.Wait()
+	close(errs)
 
-	if errWhois != nil {
-		log.Printf("error: %v", errWhois)
-		return errWhois
-	}
-	if errScrape != nil {
-		log.Printf("error: %v", errScrape)
-		return errScrape
-	}
-	if errSSL != nil {
-		return errSSL
-	}
-
-	if sslInfo != nil && len(sslInfo.Endpoints) > 0 {
-		endpoint := sslInfo.Endpoints[0]
-		req.DomainInfo.SSLGrade = endpoint.Grade
-		req.DomainInfo.Protocol = sslInfo.Protocol
-		req.DomainInfo.IsProtocolSecure = sslInfo.Protocol == "HTTPS"
-
-		var serverHops []string
-		for _, ep := range sslInfo.Endpoints {
-			serverHops = append(serverHops, ep.ServerName)
+	for err := range errs {
+		if err != nil {
+			return err
 		}
-		req.DomainInfo.ServerHops = serverHops
 	}
 
-	if domainInfo != nil {
-		req.DomainInfo.CreatedDate = domainInfo.CreatedDate
-		req.DomainInfo.ExpiryDate = domainInfo.ExpiryDate
-		req.DomainInfo.RegistrarName = domainInfo.RegistrarName
-		req.DomainInfo.ContactEmail = domainInfo.ContactEmail
-		req.DomainInfo.Protocol = domainInfo.Protocol
-		req.DomainInfo.IsProtocolSecure = domainInfo.IsProtocolSecure
-
-		req.DomainInfo.DNSRecords = append(req.DomainInfo.DNSRecords, domainInfo.DNSRecords...)
-	}
-	req.LogoURL = logoURL
-	req.IsWebsiteLive = (sslInfo != nil)
-
-	err := s.repo.Create(req)
+	req.ID = primitive.NewObjectID()
+	// Guardar la información de la franquicia
+	err := s.repo.Create(ctx, req)
 	if err != nil {
+		log.Printf("Error al crear franquicia: %v", err)
 		return err
 	}
-	log.Println("Franquicia created: \n", req)
+
+	log.Println("Franquicia creada con éxito: ", req)
 	return nil
 }
 
@@ -177,7 +188,7 @@ func (s *service) scrapeLogoURL(ctx *gin.Context, url string) (string, error) {
 
 func ensureURLScheme(urlStr string) string {
 	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
-		urlStr = "http://" + urlStr
+		urlStr = "https://" + urlStr
 	}
 	return urlStr
 }
@@ -206,6 +217,14 @@ func (s *service) getDomainInfo(ctx *gin.Context, domainReq string) (*domain.Dom
 		return nil, err
 	}
 
+	fmt.Println("administrative whois \n", parsedResult.Administrative)
+	fmt.Println("billing whois\n", parsedResult.Billing)
+	fmt.Println("billing whois\n", parsedResult.Billing)
+	fmt.Println("Domain whois\n", parsedResult.Domain)
+	fmt.Println("Registrant whois\n", parsedResult.Registrant)
+	fmt.Println("Registrar whois\n", parsedResult.Registrar)
+	fmt.Println("Technical whois\n", parsedResult.Technical)
+
 	createdDate, err := time.Parse(time.RFC3339, parsedResult.Domain.CreatedDate)
 	if err != nil {
 		return nil, err
@@ -225,12 +244,80 @@ func (s *service) getDomainInfo(ctx *gin.Context, domainReq string) (*domain.Dom
 	return domainInfo, nil
 }
 
-func (s *service) GetFranquiciaByID(ctx *gin.Context, f domain.Franquicia) error {
-	return s.repo.GetOne(f)
+func (s *service) scrapeLocationInfo(urlReq string) (*domain.Location, error) {
+
+	c := colly.NewCollector(colly.Async(true))
+	c.WithTransport(&http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	})
+
+	location := &domain.Location{}
+
+	c.OnHTML(".location-info .city", func(e *colly.HTMLElement) {
+		location.City = strings.TrimSpace(e.Text)
+	})
+	c.OnHTML(".location-info .country", func(e *colly.HTMLElement) {
+		location.Country = strings.TrimSpace(e.Text)
+	})
+	c.OnHTML(".location-info .address", func(e *colly.HTMLElement) {
+		location.Address = strings.TrimSpace(e.Text)
+	})
+	c.OnHTML(".location-info .zip", func(e *colly.HTMLElement) {
+		location.ZipCode = strings.TrimSpace(e.Text)
+	})
+
+	c.OnScraped(func(r *colly.Response) {
+		log.Printf("Finished scraping: %s", r.Request.URL)
+		if location.City == "" || location.Country == "" || location.Address == "" || location.ZipCode == "" {
+			log.Println("No se pudo obtener la información completa de ubicación")
+		}
+	})
+
+	err := c.Visit(urlReq)
+	if err != nil {
+		return nil, err
+	}
+
+	c.Wait()
+
+	return location, nil
+}
+
+func (s *service) GetFranquiciaByID(ctx *gin.Context, id string) (domain.Franquicia, error) {
+	result, err := s.repo.GetOne(ctx, id)
+	if err != nil {
+		return domain.Franquicia{}, err
+	}
+
+	return result, nil
+}
+
+func (s *service) GetByLocation(ctx *gin.Context, city, country string) ([]domain.Franquicia, error) {
+	result, err := s.repo.GetByLocation(ctx, city, country)
+	if err != nil {
+		return []domain.Franquicia{}, err
+	}
+	return result, nil
+}
+
+func (s *service) GetByDateRange(ctx *gin.Context, startDate, endDate string) ([]domain.Franquicia, error) {
+	result, err := s.repo.GetByDateRange(ctx, startDate, endDate)
+	if err != nil {
+		return []domain.Franquicia{}, err
+	}
+	return result, nil
+}
+
+func (s *service) GetByFranchiseName(ctx *gin.Context, name string) ([]domain.Franquicia, error) {
+	result, err := s.repo.GetByFranchiseName(ctx, name)
+	if err != nil {
+		return []domain.Franquicia{}, err
+	}
+	return result, nil
 }
 
 func (s *service) GetAllFranquicias(ctx *gin.Context) ([]domain.Franquicia, error) {
-	fs, err := s.repo.GetAll()
+	fs, err := s.repo.GetAll(ctx)
 	if err != nil {
 		return []domain.Franquicia{}, err
 	}
@@ -238,5 +325,5 @@ func (s *service) GetAllFranquicias(ctx *gin.Context) ([]domain.Franquicia, erro
 }
 
 func (s *service) UpdateFranquicia(ctx *gin.Context, f domain.Franquicia) error {
-	return s.repo.Update(f)
+	return s.repo.Update(ctx, f)
 }
