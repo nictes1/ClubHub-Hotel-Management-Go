@@ -1,31 +1,99 @@
 package domain
 
-// Franquicia representa los datos de una franquicia hotelera.
+import "go.mongodb.org/mongo-driver/bson/primitive"
+
+type FranquiciaRequest struct {
+	ID       string   `json:"id,omitempty" bson:"_id,omitempty"`
+	URL      string   `json:"url" bson:"url"`
+	Name     string   `json:"name" bson:"name"`
+	Location Location `json:"location" bson:"location"`
+}
+
 type Franquicia struct {
-	Name          string     `json:"name"`
-	URL           string     `json:"url"`
-	Location      Location   `json:"location"`
-	LogoURL       string     `json:"logo_url,omitempty"`    // URL del logo obtenida por scraping
-	IsWebsiteLive bool       `json:"is_website_live"`       // Estado de disponibilidad del sitio web
-	DomainInfo    DomainInfo `json:"domain_info,omitempty"` // Información del dominio obtenida mediante la librería Whois o API de SSL Labs
+	ID            primitive.ObjectID `json:"id" bson:"_id"`
+	Name          string             `json:"name" bson:"name"`
+	URL           string             `json:"url" bson:"url"`
+	Location      Location           `json:"location" bson:"location"`
+	LogoURL       string             `json:"logo_url,omitempty" bson:"logo_url,omitempty"`
+	IsWebsiteLive bool               `json:"is_website_live" bson:"is_website_live"`
+	DomainInfo    DomainInfo         `json:"domain_info,omitempty" bson:"domain_info,omitempty"`
 }
 
-// DomainInfo contiene información detallada sobre el dominio de una franquicia.
 type DomainInfo struct {
-	CreatedDate      string      `json:"created_date,omitempty"`       // Fecha de creación del dominio
-	ExpiryDate       string      `json:"expiry_date,omitempty"`        // Fecha de expiración del dominio
-	RegistrarName    string      `json:"registrar_name,omitempty"`     // Nombre del registrador del dominio
-	ContactEmail     string      `json:"contact_email,omitempty"`      // Email de contacto del titular del dominio
-	Protocol         string      `json:"protocol,omitempty"`           // Protocolo de comunicación (ej. HTTP, HTTPS)
-	IsProtocolSecure bool        `json:"is_protocol_secure,omitempty"` // Indica si el protocolo de comunicación es seguro (HTTPS)
-	ServerHops       []string    `json:"server_hops,omitempty"`        // Nombres de los servidores por los que pasa la solicitud antes de llegar al host
-	SSLGrade         string      `json:"ssl_grade,omitempty"`          // Calificación SSL del sitio web (obtenido de SSL Labs)
-	DNSRecords       []DNSRecord `json:"dns_records,omitempty"`        // Registros DNS del dominio
+	CreatedDate      string        `json:"created_date,omitempty" bson:"created_date,omitempty"`
+	ExpiryDate       string        `json:"expiry_date,omitempty" bson:"expiry_date,omitempty"`
+	RegistrarName    string        `json:"registrar_name,omitempty" bson:"registrar_name,omitempty"`
+	ContactEmail     string        `json:"contact_email,omitempty" bson:"contact_email,omitempty"`
+	Protocol         string        `json:"protocol,omitempty" bson:"protocol,omitempty"`
+	IsProtocolSecure bool          `json:"is_protocol_secure,omitempty" bson:"is_protocol_secure,omitempty"`
+	ServerHops       []string      `json:"server_hops,omitempty" bson:"server_hops,omitempty"`
+	SSLGrade         string        `json:"ssl_grade,omitempty" bson:"ssl_grade,omitempty"`
+	DNSRecords       []DNSRecord   `json:"dns_records,omitempty" bson:"dns_records,omitempty"`
+	RegistrarInfo    RegistrarInfo `json:"registrar_info,omitempty" bson:"registrar_info,omitempty"`
+	TechnicalInfo    TechnicalInfo `json:"technical_info,omitempty" bson:"technical_info,omitempty"`
+}
+type DNSRecord struct {
+	Type     string `json:"type" bson:"type"`
+	Value    string `json:"value" bson:"value"`
+	TTL      int    `json:"ttl" bson:"ttl"`
+	Priority int    `json:"priority" bson:"priority"`
 }
 
-type DNSRecord struct {
-	Type     string `json:"type"`     // Tipo de registro DNS (ej. A, AAAA, CNAME, MX, etc.)
-	Value    string `json:"value"`    // Valor del registro DNS (ej. dirección IP para registros tipo A)
-	TTL      int    `json:"ttl"`      // Tiempo de vida del registro (Time To Live)
-	Priority int    `json:"priority"` // Prioridad del registro (usado principalmente para registros MX)
+type SSLInfo struct {
+	Host            string        `json:"host" bson:"host"`
+	Port            int           `json:"port" bson:"port"`
+	Protocol        string        `json:"protocol" bson:"protocol"`
+	IsPublic        bool          `json:"isPublic" bson:"isPublic"`
+	Status          string        `json:"status" bson:"status"`
+	StartTime       int64         `json:"startTime" bson:"startTime"`
+	TestTime        int64         `json:"testTime" bson:"testTime"`
+	EngineVersion   string        `json:"engineVersion" bson:"engineVersion"`
+	CriteriaVersion string        `json:"criteriaVersion" bson:"criteriaVersion"`
+	Endpoints       []SSLEndpoint `json:"endpoints" bson:"endpoints"`
+}
+
+type SSLEndpoint struct {
+	IPAddress         string `json:"ipAddress" bson:"ipAddress"`
+	ServerName        string `json:"serverName" bson:"serverName"`
+	StatusMessage     string `json:"statusMessage" bson:"statusMessage"`
+	Grade             string `json:"grade" bson:"grade"`
+	GradeTrustIgnored string `json:"gradeTrustIgnored" bson:"gradeTrustIgnored"`
+	HasWarnings       bool   `json:"hasWarnings" bson:"hasWarnings"`
+	IsExceptional     bool   `json:"isExceptional" bson:"isExceptional"`
+	Progress          int    `json:"progress" bson:"progress"`
+	Duration          int    `json:"duration" bson:"duration"`
+	Delegation        int    `json:"delegation" bson:"delegation"`
+}
+
+type RegistrarInfo struct {
+	Organization string `json:"organization,omitempty" bson:"organization,omitempty"`
+	Address      string `json:"address,omitempty" bson:"address,omitempty"`
+	City         string `json:"city,omitempty" bson:"city,omitempty"`
+	State        string `json:"state,omitempty" bson:"state,omitempty"`
+	PostalCode   string `json:"postal_code,omitempty" bson:"postal_code,omitempty"`
+	Country      string `json:"country,omitempty" bson:"country,omitempty"`
+	Phone        string `json:"phone,omitempty" bson:"phone,omitempty"`
+	Fax          string `json:"fax,omitempty" bson:"fax,omitempty"`
+	Email        string `json:"email,omitempty" bson:"email,omitempty"`
+}
+
+type TechnicalInfo struct {
+	Organization string `json:"organization,omitempty" bson:"organization,omitempty"`
+	Address      string `json:"address,omitempty" bson:"address,omitempty"`
+	City         string `json:"city,omitempty" bson:"city,omitempty"`
+	State        string `json:"state,omitempty" bson:"state,omitempty"`
+	PostalCode   string `json:"postal_code,omitempty" bson:"postal_code,omitempty"`
+	Country      string `json:"country,omitempty" bson:"country,omitempty"`
+	Phone        string `json:"phone,omitempty" bson:"phone,omitempty"`
+	Fax          string `json:"fax,omitempty" bson:"fax,omitempty"`
+	Email        string `json:"email,omitempty" bson:"email,omitempty"`
+}
+
+type Location struct {
+	City      string  `json:"city" bson:"city"`
+	Country   string  `json:"country" bson:"country"`
+	Address   string  `json:"address" bson:"address"`
+	ZipCode   string  `json:"zip_code" bson:"zip_code"`
+	Latitude  float64 `json:"latitude,omitempty" bson:"latitude,omitempty"`
+	Longitude float64 `json:"longitude,omitempty" bson:"longitude,omitempty"`
 }

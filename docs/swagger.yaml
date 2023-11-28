@@ -1,0 +1,388 @@
+definitions:
+  domain.DNSRecord:
+    properties:
+      priority:
+        type: integer
+      ttl:
+        type: integer
+      type:
+        type: string
+      value:
+        type: string
+    type: object
+  domain.DomainInfo:
+    properties:
+      contact_email:
+        type: string
+      created_date:
+        type: string
+      dns_records:
+        items:
+          $ref: '#/definitions/domain.DNSRecord'
+        type: array
+      expiry_date:
+        type: string
+      is_protocol_secure:
+        type: boolean
+      protocol:
+        type: string
+      registrar_info:
+        $ref: '#/definitions/domain.RegistrarInfo'
+      registrar_name:
+        type: string
+      server_hops:
+        items:
+          type: string
+        type: array
+      ssl_grade:
+        type: string
+      technical_info:
+        $ref: '#/definitions/domain.TechnicalInfo'
+    type: object
+  domain.Franquicia:
+    properties:
+      domain_info:
+        $ref: '#/definitions/domain.DomainInfo'
+      id:
+        type: string
+      is_website_live:
+        type: boolean
+      location:
+        $ref: '#/definitions/domain.Location'
+      logo_url:
+        type: string
+      name:
+        type: string
+      url:
+        type: string
+    type: object
+  domain.FranquiciaRequest:
+    properties:
+      id:
+        type: string
+      location:
+        $ref: '#/definitions/domain.Location'
+      name:
+        type: string
+      url:
+        type: string
+    type: object
+  domain.Location:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      zip_code:
+        type: string
+    type: object
+  domain.RegistrarInfo:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      email:
+        type: string
+      fax:
+        type: string
+      organization:
+        type: string
+      phone:
+        type: string
+      postal_code:
+        type: string
+      state:
+        type: string
+    type: object
+  domain.TechnicalInfo:
+    properties:
+      address:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      email:
+        type: string
+      fax:
+        type: string
+      organization:
+        type: string
+      phone:
+        type: string
+      postal_code:
+        type: string
+      state:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /franquicia:
+    post:
+      consumes:
+      - application/json
+      description: Create a new Franquicia with the given details
+      parameters:
+      - description: Franquicia Request
+        in: body
+        name: FranquiciaRequest
+        required: true
+        schema:
+          $ref: '#/definitions/domain.FranquiciaRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new Franquicia
+      tags:
+      - franquicia
+  /franquicia/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a franquicia by its ID
+      parameters:
+      - description: Franquicia ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Franquicia'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Franquicia by ID
+      tags:
+      - franquicia
+    put:
+      consumes:
+      - application/json
+      description: Updates a franquicia by its ID
+      parameters:
+      - description: Franquicia ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Franquicia Update Request
+        in: body
+        name: FranquiciaRequest
+        required: true
+        schema:
+          $ref: '#/definitions/domain.FranquiciaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update Franquicia
+      tags:
+      - franquicia
+  /franquicia/daterange:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves franquicias within a specified date range
+      parameters:
+      - description: Start Date
+        in: query
+        name: start
+        required: true
+        type: string
+      - description: End Date
+        in: query
+        name: end
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Franquicia'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Franquicias by Date Range
+      tags:
+      - franquicia
+  /franquicia/location:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves franquicias based on given location parameters
+      parameters:
+      - description: City
+        in: query
+        name: city
+        required: true
+        type: string
+      - description: Country
+        in: query
+        name: country
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Franquicia'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Franquicias by Location
+      tags:
+      - franquicia
+  /franquicia/name:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves franquicias by their name
+      parameters:
+      - description: Franquicia Name
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Franquicia'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Franquicias by Name
+      tags:
+      - franquicia
+  /franquicias:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all franquicias
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Franquicia'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get All Franquicias
+      tags:
+      - franquicia
+swagger: "2.0"
