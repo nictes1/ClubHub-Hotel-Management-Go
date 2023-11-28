@@ -17,6 +17,15 @@ func NewUser(service franquicia.Service) *Franquicia {
 	return &Franquicia{service: service}
 }
 
+// @Summary Create a new Franquicia
+// @Description Create a new Franquicia with the given details
+// @Tags franquicia
+// @Accept  json
+// @Produce  json
+// @Param   FranquiciaRequest  body  domain.FranquiciaRequest  true  "Franquicia Request"
+// @Success 201  {object}  map[string]interface{}
+// @Failure 400,500  {object}  map[string]interface{}
+// @Router /franquicia [post]
 func (f *Franquicia) Create() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var req domain.FranquiciaRequest
@@ -44,6 +53,16 @@ func (f *Franquicia) Create() gin.HandlerFunc {
 	}
 }
 
+// @Summary Get Franquicias by Location
+// @Description Retrieves franquicias based on given location parameters
+// @Tags franquicia
+// @Accept  json
+// @Produce  json
+// @Param   city     query     string     true     "City"
+// @Param   country  query     string     true     "Country"
+// @Success 200 {array} domain.Franquicia
+// @Failure 400,404,500 {object} map[string]interface{}
+// @Router /franquicia/location [get]
 func (f *Franquicia) GetByLocation() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		city := ctx.Query("city")
@@ -58,6 +77,16 @@ func (f *Franquicia) GetByLocation() gin.HandlerFunc {
 	}
 }
 
+// @Summary Get Franquicias by Date Range
+// @Description Retrieves franquicias within a specified date range
+// @Tags franquicia
+// @Accept  json
+// @Produce  json
+// @Param   start    query     string     true     "Start Date"
+// @Param   end      query     string     true     "End Date"
+// @Success 200 {array} domain.Franquicia
+// @Failure 400,404,500 {object} map[string]interface{}
+// @Router /franquicia/daterange [get]
 func (f *Franquicia) GetFranquiciasByDateRange() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		startDate := ctx.Query("start")
@@ -72,6 +101,15 @@ func (f *Franquicia) GetFranquiciasByDateRange() gin.HandlerFunc {
 	}
 }
 
+// @Summary Get Franquicia by ID
+// @Description Retrieves a franquicia by its ID
+// @Tags franquicia
+// @Accept  json
+// @Produce  json
+// @Param   id       path      string     true     "Franquicia ID"
+// @Success 200 {object} domain.Franquicia
+// @Failure 400,404,500 {object} map[string]interface{}
+// @Router /franquicia/{id} [get]
 func (f *Franquicia) GetFranquiciaByID() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		id := ctx.Param("id")
@@ -84,6 +122,15 @@ func (f *Franquicia) GetFranquiciaByID() gin.HandlerFunc {
 	}
 }
 
+// @Summary Get Franquicias by Name
+// @Description Retrieves franquicias by their name
+// @Tags franquicia
+// @Accept  json
+// @Produce  json
+// @Param   name     query     string     true     "Franquicia Name"
+// @Success 200 {array} domain.Franquicia
+// @Failure 400,404,500 {object} map[string]interface{}
+// @Router /franquicia/name [get]
 func (h *Franquicia) GetFranquiciasByName() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		name := ctx.Query("name")
@@ -97,6 +144,15 @@ func (h *Franquicia) GetFranquiciasByName() gin.HandlerFunc {
 	}
 
 }
+
+// @Summary Get All Franquicias
+// @Description Retrieves all franquicias
+// @Tags franquicia
+// @Accept  json
+// @Produce  json
+// @Success 200 {array} domain.Franquicia
+// @Failure 500 {object} map[string]interface{}
+// @Router /franquicias [get]
 func (f *Franquicia) GetAllFranquicias() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		franquicias, err := f.service.GetAllFranquicias(ctx)
@@ -109,6 +165,16 @@ func (f *Franquicia) GetAllFranquicias() gin.HandlerFunc {
 	}
 }
 
+// @Summary Update Franquicia
+// @Description Updates a franquicia by its ID
+// @Tags franquicia
+// @Accept  json
+// @Produce  json
+// @Param   id       path      string     true     "Franquicia ID"
+// @Param   FranquiciaRequest  body      domain.FranquiciaRequest  true  "Franquicia Update Request"
+// @Success 200 {object} map[string]string
+// @Failure 400,404,500 {object} map[string]interface{}
+// @Router /franquicia/{id} [put]
 func (f *Franquicia) UpdateFranquicia() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		id := ctx.Param("id")

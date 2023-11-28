@@ -3,7 +3,6 @@ package main
 import (
 	"clubhub-hotel-management/cmd/server/routes"
 	"clubhub-hotel-management/internal/db"
-
 	"context"
 	"log"
 
@@ -18,7 +17,6 @@ func init() {
 }
 
 func main() {
-	gin.SetMode(gin.ReleaseMode)
 	engine := gin.Default()
 
 	mongodb := db.MongoClient

@@ -5,14 +5,13 @@ import (
 	"clubhub-hotel-management/internal/franquicia"
 	"os"
 
+	_ "clubhub-hotel-management/docs"
+
 	"github.com/gin-gonic/gin"
-	"github.com/swaggo/swag/example/basic/docs"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.mongodb.org/mongo-driver/mongo"
 )
-
-func init() {
-
-}
 
 type Router interface {
 	MapRoutes()
@@ -34,8 +33,7 @@ func (r *router) MapRoutes() {
 }
 
 func (r *router) setGroup() {
-	docs.SwaggerInfo.BasePath = "/api/v1"
-
+	r.r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.rg = r.r.Group("/api/hotelmagnament/v1")
 }
 

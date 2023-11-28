@@ -20,20 +20,19 @@ type Franquicia struct {
 }
 
 type DomainInfo struct {
-	ID               string      `json:"id" bson:"_id"`
-	CreatedDate      string      `json:"created_date,omitempty" bson:"created_date,omitempty"`
-	ExpiryDate       string      `json:"expiry_date,omitempty" bson:"expiry_date,omitempty"`
-	RegistrarName    string      `json:"registrar_name,omitempty" bson:"registrar_name,omitempty"`
-	ContactEmail     string      `json:"contact_email,omitempty" bson:"contact_email,omitempty"`
-	Protocol         string      `json:"protocol,omitempty" bson:"protocol,omitempty"`
-	IsProtocolSecure bool        `json:"is_protocol_secure,omitempty" bson:"is_protocol_secure,omitempty"`
-	ServerHops       []string    `json:"server_hops,omitempty" bson:"server_hops,omitempty"`
-	SSLGrade         string      `json:"ssl_grade,omitempty" bson:"ssl_grade,omitempty"`
-	DNSRecords       []DNSRecord `json:"dns_records,omitempty" bson:"dns_records,omitempty"`
+	CreatedDate      string        `json:"created_date,omitempty" bson:"created_date,omitempty"`
+	ExpiryDate       string        `json:"expiry_date,omitempty" bson:"expiry_date,omitempty"`
+	RegistrarName    string        `json:"registrar_name,omitempty" bson:"registrar_name,omitempty"`
+	ContactEmail     string        `json:"contact_email,omitempty" bson:"contact_email,omitempty"`
+	Protocol         string        `json:"protocol,omitempty" bson:"protocol,omitempty"`
+	IsProtocolSecure bool          `json:"is_protocol_secure,omitempty" bson:"is_protocol_secure,omitempty"`
+	ServerHops       []string      `json:"server_hops,omitempty" bson:"server_hops,omitempty"`
+	SSLGrade         string        `json:"ssl_grade,omitempty" bson:"ssl_grade,omitempty"`
+	DNSRecords       []DNSRecord   `json:"dns_records,omitempty" bson:"dns_records,omitempty"`
+	RegistrarInfo    RegistrarInfo `json:"registrar_info,omitempty" bson:"registrar_info,omitempty"`
+	TechnicalInfo    TechnicalInfo `json:"technical_info,omitempty" bson:"technical_info,omitempty"`
 }
-
 type DNSRecord struct {
-	ID       string `json:"id" bson:"_id"`
 	Type     string `json:"type" bson:"type"`
 	Value    string `json:"value" bson:"value"`
 	TTL      int    `json:"ttl" bson:"ttl"`
@@ -41,7 +40,6 @@ type DNSRecord struct {
 }
 
 type SSLInfo struct {
-	ID              string        `json:"id" bson:"_id"`
 	Host            string        `json:"host" bson:"host"`
 	Port            int           `json:"port" bson:"port"`
 	Protocol        string        `json:"protocol" bson:"protocol"`
@@ -55,7 +53,6 @@ type SSLInfo struct {
 }
 
 type SSLEndpoint struct {
-	ID                string `json:"id" bson:"_id"`
 	IPAddress         string `json:"ipAddress" bson:"ipAddress"`
 	ServerName        string `json:"serverName" bson:"serverName"`
 	StatusMessage     string `json:"statusMessage" bson:"statusMessage"`
@@ -66,4 +63,37 @@ type SSLEndpoint struct {
 	Progress          int    `json:"progress" bson:"progress"`
 	Duration          int    `json:"duration" bson:"duration"`
 	Delegation        int    `json:"delegation" bson:"delegation"`
+}
+
+type RegistrarInfo struct {
+	Organization string `json:"organization,omitempty" bson:"organization,omitempty"`
+	Address      string `json:"address,omitempty" bson:"address,omitempty"`
+	City         string `json:"city,omitempty" bson:"city,omitempty"`
+	State        string `json:"state,omitempty" bson:"state,omitempty"`
+	PostalCode   string `json:"postal_code,omitempty" bson:"postal_code,omitempty"`
+	Country      string `json:"country,omitempty" bson:"country,omitempty"`
+	Phone        string `json:"phone,omitempty" bson:"phone,omitempty"`
+	Fax          string `json:"fax,omitempty" bson:"fax,omitempty"`
+	Email        string `json:"email,omitempty" bson:"email,omitempty"`
+}
+
+type TechnicalInfo struct {
+	Organization string `json:"organization,omitempty" bson:"organization,omitempty"`
+	Address      string `json:"address,omitempty" bson:"address,omitempty"`
+	City         string `json:"city,omitempty" bson:"city,omitempty"`
+	State        string `json:"state,omitempty" bson:"state,omitempty"`
+	PostalCode   string `json:"postal_code,omitempty" bson:"postal_code,omitempty"`
+	Country      string `json:"country,omitempty" bson:"country,omitempty"`
+	Phone        string `json:"phone,omitempty" bson:"phone,omitempty"`
+	Fax          string `json:"fax,omitempty" bson:"fax,omitempty"`
+	Email        string `json:"email,omitempty" bson:"email,omitempty"`
+}
+
+type Location struct {
+	City      string  `json:"city" bson:"city"`
+	Country   string  `json:"country" bson:"country"`
+	Address   string  `json:"address" bson:"address"`
+	ZipCode   string  `json:"zip_code" bson:"zip_code"`
+	Latitude  float64 `json:"latitude,omitempty" bson:"latitude,omitempty"`
+	Longitude float64 `json:"longitude,omitempty" bson:"longitude,omitempty"`
 }

@@ -34,7 +34,7 @@ type Service interface {
 	CreateFranquicia(*gin.Context, *domain.Franquicia) error
 	getSSLInfo(*gin.Context, string) (*domain.SSLInfo, error)
 	scrapeLogoURL(*gin.Context, string) (string, error)
-	getDomainInfo(*gin.Context, string) (*domain.DomainInfo, error)
+	getDomainInfo(ctx *gin.Context, domainReq string) (*domain.DomainInfo, *domain.Location, error)
 
 	GetFranquiciaByID(ctx *gin.Context, id string) (domain.Franquicia, error)
 	GetByLocation(ctx *gin.Context, city, country string) ([]domain.Franquicia, error)
@@ -53,72 +53,55 @@ func NewService(r Repository) Service {
 
 // CreateFranquicia maneja la creación de una nueva franquicia.
 func (s *service) CreateFranquicia(ctx *gin.Context, req *domain.Franquicia) error {
-	var wg sync.WaitGroup
-	errs := make(chan error, 4)
+	log.Println("Iniciando la creación de franquicia")
 
-	wg.Add(4)
+	var info *domain.DomainInfo
+	var location *domain.Location
+	var sslInfo *domain.SSLInfo
+	var wg sync.WaitGroup
+	errs := make(chan error, 3)
+
+	var err error
+
+	wg.Add(2)
 
 	// Goroutine para obtener información SSL
 	go func() {
 		defer wg.Done()
-		sslInfo, err := s.getSSLInfo(ctx, req.URL)
+		sslInfo, err = s.getSSLInfo(ctx, req.URL)
 		if err != nil {
-			errs <- err
+			errs <- fmt.Errorf("error obteniendo información SSL: %w", err)
 			return
 		}
-
-		if sslInfo != nil && len(sslInfo.Endpoints) > 0 {
-			req.DomainInfo.SSLGrade = sslInfo.Endpoints[0].Grade
-			req.DomainInfo.Protocol = sslInfo.Protocol
-			req.DomainInfo.IsProtocolSecure = sslInfo.Protocol == "HTTPS"
-
-			var serverHops []string
-			for _, endpoint := range sslInfo.Endpoints {
-				serverHops = append(serverHops, endpoint.ServerName)
-			}
-			req.DomainInfo.ServerHops = serverHops
-		}
+		s.assignSSLInfo(req, sslInfo)
 	}()
 
 	go func() {
 		defer wg.Done()
-		info, err := s.getDomainInfo(ctx, req.URL)
+		info, location, err = s.getDomainInfo(ctx, req.URL)
 		if err != nil {
 			errs <- err
 			return
 		}
-		req.DomainInfo.CreatedDate = info.CreatedDate
-		req.DomainInfo.ExpiryDate = info.ExpiryDate
-		req.DomainInfo.RegistrarName = info.RegistrarName
-		req.DomainInfo.ContactEmail = info.ContactEmail
-		req.DomainInfo.Protocol = info.Protocol
-		req.DomainInfo.IsProtocolSecure = info.IsProtocolSecure
-		req.DomainInfo.DNSRecords = info.DNSRecords
-	}()
-
-	go func() {
-		defer wg.Done()
-		logoURL, err := s.scrapeLogoURL(ctx, ensureURLScheme(req.URL))
-		if err != nil {
-			errs <- err
-			return
-		}
-		req.LogoURL = logoURL
-	}()
-
-	// Goroutine para obtener la ubicación
-	go func() {
-		defer wg.Done()
-		location, err := s.scrapeLocationInfo(ensureURLScheme(req.URL))
-		if err != nil {
-			errs <- err
-			return
-		}
+		req.DomainInfo = *info
 		req.Location = *location
+
 	}()
+
+	// go func() {
+	// 	defer wg.Done()
+	// 	logoURL, err := s.scrapeLogoURL(ctx, ensureURLScheme(req.URL))
+	// 	if err != nil {
+	// 		errs <- err
+	// 		return
+	// 	}
+	// 	req.LogoURL = logoURL
+	// }()
 
 	wg.Wait()
 	close(errs)
+
+	log.Println("Finalizando la espera de goroutines en CreateFranquicia")
 
 	for err := range errs {
 		if err != nil {
@@ -127,8 +110,9 @@ func (s *service) CreateFranquicia(ctx *gin.Context, req *domain.Franquicia) err
 	}
 
 	req.ID = primitive.NewObjectID()
-	// Guardar la información de la franquicia
-	err := s.repo.Create(ctx, req)
+	req.Name = info.RegistrarName
+	log.Println("Finalizando la espera de goroutines en CreateFranquicia")
+	err = s.repo.Create(ctx, req)
 	if err != nil {
 		log.Printf("Error al crear franquicia: %v", err)
 		return err
@@ -138,7 +122,19 @@ func (s *service) CreateFranquicia(ctx *gin.Context, req *domain.Franquicia) err
 	return nil
 }
 
+func (s *service) assignSSLInfo(req *domain.Franquicia, sslInfo *domain.SSLInfo) {
+	if sslInfo != nil && len(sslInfo.Endpoints) > 0 {
+		req.DomainInfo.SSLGrade = sslInfo.Endpoints[0].Grade
+		req.DomainInfo.Protocol = sslInfo.Protocol
+		req.DomainInfo.IsProtocolSecure = sslInfo.Protocol == "HTTPS"
+		for _, endpoint := range sslInfo.Endpoints {
+			req.DomainInfo.ServerHops = append(req.DomainInfo.ServerHops, endpoint.ServerName)
+		}
+	}
+}
+
 func (s *service) getSSLInfo(ctx *gin.Context, url string) (*domain.SSLInfo, error) {
+	log.Printf("Obteniendo información SSL para URL: %s", url)
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -161,22 +157,36 @@ func (s *service) getSSLInfo(ctx *gin.Context, url string) (*domain.SSLInfo, err
 }
 
 func (s *service) scrapeLogoURL(ctx *gin.Context, url string) (string, error) {
-	c := colly.NewCollector(colly.Async(true))
+	log.Printf("Buscando logo en URL: %s", url)
+	c := colly.NewCollector(
+		colly.Async(true),
+		// colly timeout
+		colly.MaxDepth(1),
+	)
 	c.WithTransport(&http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	})
 
 	var logoURL string
+	var found bool
+
 	c.OnHTML("img", func(e *colly.HTMLElement) {
-		logoURL = e.Request.AbsoluteURL(e.Attr("src"))
-		log.Println("Found image:", logoURL)
+		if !found {
+			logoURL = e.Request.AbsoluteURL(e.Attr("src"))
+			log.Println("Found image:", logoURL)
+			found = true
+		}
 	})
 
 	c.OnError(func(r *colly.Response, err error) {
 		log.Println("Request URL:", r.Request.URL, "failed with response:", r, "\nError:", err)
 	})
 
-	c.Visit(url)
+	err := c.Visit(url)
+	if err != nil {
+		return "", err
+	}
+
 	c.Wait()
 
 	if logoURL == "" {
@@ -201,50 +211,79 @@ func extractDomainName(urlStr string) (string, error) {
 	return parsedURL.Hostname(), nil
 }
 
-func (s *service) getDomainInfo(ctx *gin.Context, domainReq string) (*domain.DomainInfo, error) {
+func (s *service) getDomainInfo(ctx *gin.Context, domainReq string) (*domain.DomainInfo, *domain.Location, error) {
+	log.Printf("Obteniendo información de dominio para: %s", domainReq)
 	domainName, err := extractDomainName(domainReq)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	whoisResult, err := whois.Whois(domainName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	parsedResult, err := whoisparser.Parse(whoisResult)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-
-	fmt.Println("administrative whois \n", parsedResult.Administrative)
-	fmt.Println("billing whois\n", parsedResult.Billing)
-	fmt.Println("billing whois\n", parsedResult.Billing)
-	fmt.Println("Domain whois\n", parsedResult.Domain)
-	fmt.Println("Registrant whois\n", parsedResult.Registrant)
-	fmt.Println("Registrar whois\n", parsedResult.Registrar)
-	fmt.Println("Technical whois\n", parsedResult.Technical)
 
 	createdDate, err := time.Parse(time.RFC3339, parsedResult.Domain.CreatedDate)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	expiryDate, err := time.Parse(time.RFC3339, parsedResult.Domain.ExpirationDate)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+
+	registrarInfo := domain.RegistrarInfo{
+		Organization: parsedResult.Registrar.Name,
+		Address:      parsedResult.Registrar.Street,
+		City:         parsedResult.Registrar.City,
+		State:        parsedResult.Registrar.Province,
+		PostalCode:   parsedResult.Registrar.PostalCode,
+		Country:      parsedResult.Registrar.Country,
+		Phone:        parsedResult.Registrar.Phone,
+		Fax:          parsedResult.Registrar.Fax,
+		Email:        parsedResult.Registrar.Email,
+	}
+
+	technicalInfo := domain.TechnicalInfo{
+		Organization: parsedResult.Technical.Organization,
+		Address:      parsedResult.Technical.Street,
+		City:         parsedResult.Technical.City,
+		State:        parsedResult.Technical.Province,
+		PostalCode:   parsedResult.Technical.PostalCode,
+		Country:      parsedResult.Technical.Country,
+		Phone:        parsedResult.Technical.Phone,
+		Fax:          parsedResult.Technical.Fax,
+		Email:        parsedResult.Technical.Email,
+	}
+
+	location := &domain.Location{
+		City:    parsedResult.Administrative.City,
+		Country: parsedResult.Administrative.Country,
+		Address: parsedResult.Administrative.Street,
+		ZipCode: parsedResult.Administrative.PostalCode,
 	}
 
 	domainInfo := &domain.DomainInfo{
 		CreatedDate:   createdDate.Format("2006-01-02 15:04:05"),
 		ExpiryDate:    expiryDate.Format("2006-01-02 15:04:05"),
-		RegistrarName: parsedResult.Registrar.Name,
+		RegistrarName: parsedResult.Administrative.Name,
 		ContactEmail:  parsedResult.Administrative.Email,
+		RegistrarInfo: registrarInfo,
+		TechnicalInfo: technicalInfo,
 	}
 
-	return domainInfo, nil
+	fmt.Println("ParsedAdministrative result: ", parsedResult.Administrative)
+
+	return domainInfo, location, nil
 }
 
-func (s *service) scrapeLocationInfo(urlReq string) (*domain.Location, error) {
+// Funcion para obtener la ubicacion de una pagina. (params: etiquetas css.)
+func (s *service) ScrapeLocationInfo(urlReq, city, country, adrress, info string) (*domain.Location, error) {
 
 	c := colly.NewCollector(colly.Async(true))
 	c.WithTransport(&http.Transport{
@@ -253,16 +292,16 @@ func (s *service) scrapeLocationInfo(urlReq string) (*domain.Location, error) {
 
 	location := &domain.Location{}
 
-	c.OnHTML(".location-info .city", func(e *colly.HTMLElement) {
+	c.OnHTML(city, func(e *colly.HTMLElement) {
 		location.City = strings.TrimSpace(e.Text)
 	})
-	c.OnHTML(".location-info .country", func(e *colly.HTMLElement) {
+	c.OnHTML(country, func(e *colly.HTMLElement) {
 		location.Country = strings.TrimSpace(e.Text)
 	})
-	c.OnHTML(".location-info .address", func(e *colly.HTMLElement) {
+	c.OnHTML(adrress, func(e *colly.HTMLElement) {
 		location.Address = strings.TrimSpace(e.Text)
 	})
-	c.OnHTML(".location-info .zip", func(e *colly.HTMLElement) {
+	c.OnHTML(info, func(e *colly.HTMLElement) {
 		location.ZipCode = strings.TrimSpace(e.Text)
 	})
 
