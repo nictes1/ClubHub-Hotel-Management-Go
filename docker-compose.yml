@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      MONGODB_USERNAME: user26
+      MONGODB_PASSWORD: OdHiDCuQOU5v1cs6
+      MONGODB_CLUSTER_URI: hmcluster.owpfqic.mongodb.net
+      MONGODB_DATABASE_NAME: hotelmagnamentdb
+      MONGODB_URI: mongodb+srv://user26:OdHiDCuQOU5v1cs6@hmcluster.owpfqic.mongodb.net/hotelmagnamentdb
